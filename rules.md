@@ -74,3 +74,4 @@
   - `docs/qa/fase-NN-review.md` — parecer de qualidade do QA.
   - `docs/cto/fase-NN-aprovacao.md` — parecer de aprovação arquitetural final do CTO, emitido **após** o parecer do QA, avaliando aderência aos ADRs da fase e a este documento.
 - A aprovação do CTO encerra o ciclo interno dos agentes; ela não substitui a aprovação do stakeholder para o início da fase seguinte, quando esta for exigida pelo processo em vigor.
+- **Atualização de processo (2026-07-31, decisão do stakeholder)**: a aprovação explícita do stakeholder deixou de ser um bloqueio obrigatório entre toda fase e a próxima — o stakeholder pode indicar diretamente qual a próxima fase a implementar, sem aguardar um pedido formal de aprovação a cada encerramento. Isso **não dispensa** os dois artefatos formais (QA e CTO) exigidos acima ao final de cada fase — apenas remove o gate de espera pela resposta do stakeholder antes de iniciar a fase seguinte.

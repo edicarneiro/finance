@@ -1,5 +1,8 @@
 # Dependências
 node_modules/
+backend-java-tools/
+*.m2/
+target/
 
 # Builds
 dist/

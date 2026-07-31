@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceito |
+| Status | **Superado por [ADR-0013](0013-migracao-java-spring-boot.md)** — mantido para registro histórico da decisão original (TypeScript/Node.js) |
 | Data | 2026-07-30 |
 | Autor | CTO / Principal Software Architect |
 | Fase | 1 |
