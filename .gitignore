@@ -1,0 +1,28 @@
+# Dependências
+node_modules/
+
+# Builds
+dist/
+build/
+coverage/
+
+# Bancos de dados locais e segredos
+*.sqlite
+*.sqlite-journal
+*.db
+.env
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
