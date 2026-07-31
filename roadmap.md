@@ -33,8 +33,8 @@ O MVP foi decomposto em 13 fases, seguindo a ordem de dependência natural do do
 |---|---|---|---|---|
 | 1 | Fundação técnica + Cadastro e Login | RF-001, RF-002, RF-003, RF-008 | — | ✅ Concluída |
 | 2.1 | Refresh token e logout | RF-008 (renovação segura) | Fase 1 | 🟡 Aguardando aprovação |
-| 2.2 | Edição de perfil e consentimento LGPD | RF-006, RF-046 | Fase 2.1 | ⬜ Não iniciada |
-| 2.3 | Recuperação de senha | RF-005 | Fase 2.1 | ⬜ Não iniciada |
+| 2.2 | Edição de perfil e consentimento LGPD | RF-006, RF-046 | Fase 2.1 | 🟡 Aguardando aprovação |
+| 2.3 | Recuperação de senha | RF-005 | Fase 2.1 | 🟡 Aguardando aprovação |
 | 2.4 | Exclusão de conta (LGPD) | RF-007 | Fase 2.1 | ⬜ Não iniciada |
 | 2.5 | Autenticação multifator (MFA) | RF-004 | Fase 2.1 | ⬜ Não iniciada |
 | 3 | Contas e Carteiras Financeiras | RF-009 a RF-013 | Fase 1 | ⬜ Não iniciada |
@@ -74,4 +74,6 @@ Fases futuras, fora do escopo atual, mantidas aqui apenas para rastreabilidade. 
 | Fase | Aprovação CTO | Aprovação Stakeholder | ADRs | Revisão QA |
 |---|---|---|---|---|
 | 1 | ✅ [docs/cto/fase-01-aprovacao.md](docs/cto/fase-01-aprovacao.md) | ✅ (autorização para iniciar a Fase 2) | [0001](docs/adr/0001-stack-tecnologica-backend.md), [0002](docs/adr/0002-arquitetura-hexagonal-backend.md), [0003](docs/adr/0003-persistencia-fase-1.md), [0004](docs/adr/0004-sequenciamento-backend-first.md), [0005](docs/adr/0005-autenticacao-e-sessao.md) | [docs/qa/fase-01-review.md](docs/qa/fase-01-review.md) |
-| 2.1 | ✅ [docs/cto/fase-02-1-aprovacao.md](docs/cto/fase-02-1-aprovacao.md) | *aguardando* | [0006](docs/adr/0006-decomposicao-fase-2.md), [0007](docs/adr/0007-estrategia-refresh-token.md) | [docs/qa/fase-02-1-review.md](docs/qa/fase-02-1-review.md) |
+| 2.1 | ✅ [docs/cto/fase-02-1-aprovacao.md](docs/cto/fase-02-1-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.2) | [0006](docs/adr/0006-decomposicao-fase-2.md), [0007](docs/adr/0007-estrategia-refresh-token.md) | [docs/qa/fase-02-1-review.md](docs/qa/fase-02-1-review.md) |
+| 2.2 | ✅ [docs/cto/fase-02-2-aprovacao.md](docs/cto/fase-02-2-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.3) | [0008](docs/adr/0008-perfil-e-consentimento.md) | [docs/qa/fase-02-2-review.md](docs/qa/fase-02-2-review.md) |
+| 2.3 | ✅ [docs/cto/fase-02-3-aprovacao.md](docs/cto/fase-02-3-aprovacao.md) | *aguardando* | [0009](docs/adr/0009-recuperacao-de-senha.md) | [docs/qa/fase-02-3-review.md](docs/qa/fase-02-3-review.md) |

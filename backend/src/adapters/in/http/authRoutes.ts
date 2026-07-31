@@ -1,18 +1,22 @@
-import { Router, type NextFunction, type Request, type RequestHandler, type Response } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import { RegisterUserUseCase } from "../../../application/use-cases/RegisterUserUseCase";
 import { AuthenticateUserUseCase } from "../../../application/use-cases/AuthenticateUserUseCase";
 import { RefreshAccessTokenUseCase } from "../../../application/use-cases/RefreshAccessTokenUseCase";
 import { LogoutUseCase } from "../../../application/use-cases/LogoutUseCase";
+import { RequestPasswordResetUseCase } from "../../../application/use-cases/RequestPasswordResetUseCase";
+import { ResetPasswordUseCase } from "../../../application/use-cases/ResetPasswordUseCase";
 import { parseCredentials } from "./parseCredentials";
 import { parseRefreshToken } from "./parseRefreshToken";
-import type { AuthenticatedRequest } from "./requireAuth";
+import { parsePasswordResetRequest } from "./parsePasswordResetRequest";
+import { parsePasswordResetConfirmation } from "./parsePasswordResetConfirmation";
 
 export interface AuthRoutesDependencies {
   registerUser: RegisterUserUseCase;
   authenticateUser: AuthenticateUserUseCase;
   refreshAccessToken: RefreshAccessTokenUseCase;
   logout: LogoutUseCase;
-  requireAuth: RequestHandler;
+  requestPasswordReset: RequestPasswordResetUseCase;
+  resetPassword: ResetPasswordUseCase;
 }
 
 export function createAuthRouter(deps: AuthRoutesDependencies): Router {
@@ -58,9 +62,25 @@ export function createAuthRouter(deps: AuthRoutesDependencies): Router {
     }
   });
 
-  // Minimal protected route proving token issuance/validation end-to-end (RF-008).
-  router.get("/me", deps.requireAuth, (req: AuthenticatedRequest, res: Response) => {
-    res.status(200).json({ userId: req.userId });
+  // Always 202, whether or not the email exists (ADR-0009 — anti-enumeration).
+  router.post("/password-reset/request", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const email = parsePasswordResetRequest(req.body);
+      await deps.requestPasswordReset.execute({ email });
+      res.status(202).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/password-reset/confirm", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, newPassword } = parsePasswordResetConfirmation(req.body);
+      await deps.resetPassword.execute({ token, newPassword });
+      res.status(200).send();
+    } catch (error) {
+      next(error);
+    }
   });
 
   return router;

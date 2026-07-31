@@ -25,3 +25,14 @@ export function createRequireAuth(tokenService: TokenService) {
     next();
   };
 }
+
+/**
+ * Reads req.userId set by requireAuth. Throwing here signals a wiring bug
+ * (a route using this without requireAuth ahead of it), not a client error.
+ */
+export function getAuthenticatedUserId(req: AuthenticatedRequest): string {
+  if (!req.userId) {
+    throw new Error("getAuthenticatedUserId called on a request that did not go through requireAuth.");
+  }
+  return req.userId;
+}

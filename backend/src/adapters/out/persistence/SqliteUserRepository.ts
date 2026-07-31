@@ -7,6 +7,7 @@ interface UserRow {
   id: string;
   email: string;
   password_hash: string;
+  name: string | null;
   created_at: string;
 }
 
@@ -17,14 +18,23 @@ export class SqliteUserRepository implements UserRepository {
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
+        name TEXT,
         created_at TEXT NOT NULL
       )
     `);
   }
 
   async findByEmail(email: Email): Promise<User | null> {
-    const row = this.db.prepare("SELECT id, email, password_hash, created_at FROM users WHERE email = ?").get(
-      email.toString(),
+    const row = this.db
+      .prepare("SELECT id, email, password_hash, name, created_at FROM users WHERE email = ?")
+      .get(email.toString()) as UserRow | undefined;
+
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findById(id: string): Promise<User | null> {
+    const row = this.db.prepare("SELECT id, email, password_hash, name, created_at FROM users WHERE id = ?").get(
+      id,
     ) as UserRow | undefined;
 
     return row ? this.toDomain(row) : null;
@@ -32,8 +42,14 @@ export class SqliteUserRepository implements UserRepository {
 
   async save(user: User): Promise<void> {
     this.db
-      .prepare("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
-      .run(user.id, user.email.toString(), user.passwordHash, user.createdAt.toISOString());
+      .prepare("INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)")
+      .run(user.id, user.email.toString(), user.passwordHash, user.name, user.createdAt.toISOString());
+  }
+
+  async update(user: User): Promise<void> {
+    this.db
+      .prepare("UPDATE users SET email = ?, name = ?, password_hash = ? WHERE id = ?")
+      .run(user.email.toString(), user.name, user.passwordHash, user.id);
   }
 
   private toDomain(row: UserRow): User {
@@ -41,6 +57,7 @@ export class SqliteUserRepository implements UserRepository {
       id: row.id,
       email: Email.create(row.email),
       passwordHash: row.password_hash,
+      name: row.name,
       createdAt: new Date(row.created_at),
     });
   }
