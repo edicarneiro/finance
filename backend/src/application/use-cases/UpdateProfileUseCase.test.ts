@@ -5,6 +5,7 @@ import { InMemoryUserRepository } from "../../adapters/out/persistence/InMemoryU
 import { UserNotFoundError } from "../../domain/user/errors/UserNotFoundError";
 import { DuplicateEmailError } from "../../domain/user/errors/DuplicateEmailError";
 import { InvalidNameError } from "../../domain/user/errors/InvalidNameError";
+import { Email } from "../../domain/user/Email";
 import { FakePasswordHasher } from "../../test-support/FakePasswordHasher";
 import { SequentialIdGenerator } from "../../test-support/SequentialIdGenerator";
 
@@ -49,5 +50,20 @@ describe("UpdateProfileUseCase", () => {
     await expect(useCase.execute({ userId: "ghost", name: "Ana Souza", email: "ana@example.com" })).rejects.toThrow(
       UserNotFoundError,
     );
+  });
+
+  it("rejects editing an anonymized (deleted) account, e.g. via a still-valid access token (RF-007)", async () => {
+    const user = await userRepository.findById("user-1");
+    await userRepository.update(
+      user!.anonymize({
+        email: Email.create("deleted-user-1@anonymized.financepulse.internal"),
+        passwordHash: "unusable-hash",
+        deletedAt: new Date("2026-02-01T00:00:00.000Z"),
+      }),
+    );
+
+    await expect(
+      useCase.execute({ userId: "user-1", name: "Ana Souza", email: "ana@example.com" }),
+    ).rejects.toThrow(UserNotFoundError);
   });
 });

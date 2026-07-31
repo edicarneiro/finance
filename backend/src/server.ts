@@ -13,6 +13,12 @@ import type { GetProfileUseCase } from "./application/use-cases/GetProfileUseCas
 import type { UpdateProfileUseCase } from "./application/use-cases/UpdateProfileUseCase";
 import type { RecordConsentUseCase } from "./application/use-cases/RecordConsentUseCase";
 import type { ListConsentHistoryUseCase } from "./application/use-cases/ListConsentHistoryUseCase";
+import type { DeleteAccountUseCase } from "./application/use-cases/DeleteAccountUseCase";
+import type { EnrollMfaUseCase } from "./application/use-cases/EnrollMfaUseCase";
+import type { ConfirmMfaEnrollmentUseCase } from "./application/use-cases/ConfirmMfaEnrollmentUseCase";
+import type { DisableMfaUseCase } from "./application/use-cases/DisableMfaUseCase";
+import type { GetMfaStatusUseCase } from "./application/use-cases/GetMfaStatusUseCase";
+import type { CompleteMfaLoginUseCase } from "./application/use-cases/CompleteMfaLoginUseCase";
 import type { TokenService } from "./application/ports/TokenService";
 
 export interface ServerDependencies {
@@ -26,6 +32,12 @@ export interface ServerDependencies {
   updateProfile: UpdateProfileUseCase;
   recordConsent: RecordConsentUseCase;
   listConsentHistory: ListConsentHistoryUseCase;
+  deleteAccount: DeleteAccountUseCase;
+  enrollMfa: EnrollMfaUseCase;
+  confirmMfaEnrollment: ConfirmMfaEnrollmentUseCase;
+  disableMfa: DisableMfaUseCase;
+  getMfaStatus: GetMfaStatusUseCase;
+  completeMfaLogin: CompleteMfaLoginUseCase;
   tokenService: TokenService;
 }
 
@@ -42,6 +54,7 @@ export function createServer(deps: ServerDependencies): Express {
       logout: deps.logout,
       requestPasswordReset: deps.requestPasswordReset,
       resetPassword: deps.resetPassword,
+      completeMfaLogin: deps.completeMfaLogin,
     }),
   );
 
@@ -52,6 +65,11 @@ export function createServer(deps: ServerDependencies): Express {
       updateProfile: deps.updateProfile,
       recordConsent: deps.recordConsent,
       listConsentHistory: deps.listConsentHistory,
+      deleteAccount: deps.deleteAccount,
+      enrollMfa: deps.enrollMfa,
+      confirmMfaEnrollment: deps.confirmMfaEnrollment,
+      disableMfa: deps.disableMfa,
+      getMfaStatus: deps.getMfaStatus,
       requireAuth: createRequireAuth(deps.tokenService),
     }),
   );

@@ -27,7 +27,7 @@ export class RecordConsentUseCase {
 
   async execute(input: RecordConsentInput): Promise<ConsentRecordView> {
     const user = await this.userRepository.findById(input.userId);
-    if (!user) {
+    if (!user || user.isDeleted()) {
       throw new UserNotFoundError();
     }
 

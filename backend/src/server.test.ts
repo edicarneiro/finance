@@ -12,33 +12,49 @@ import { GetProfileUseCase } from "./application/use-cases/GetProfileUseCase";
 import { UpdateProfileUseCase } from "./application/use-cases/UpdateProfileUseCase";
 import { RecordConsentUseCase } from "./application/use-cases/RecordConsentUseCase";
 import { ListConsentHistoryUseCase } from "./application/use-cases/ListConsentHistoryUseCase";
+import { DeleteAccountUseCase } from "./application/use-cases/DeleteAccountUseCase";
+import { EnrollMfaUseCase } from "./application/use-cases/EnrollMfaUseCase";
+import { ConfirmMfaEnrollmentUseCase } from "./application/use-cases/ConfirmMfaEnrollmentUseCase";
+import { DisableMfaUseCase } from "./application/use-cases/DisableMfaUseCase";
+import { GetMfaStatusUseCase } from "./application/use-cases/GetMfaStatusUseCase";
+import { CompleteMfaLoginUseCase } from "./application/use-cases/CompleteMfaLoginUseCase";
 import { SessionIssuer } from "./application/services/SessionIssuer";
+import { MfaChallengeIssuer } from "./application/services/MfaChallengeIssuer";
 import { InMemoryUserRepository } from "./adapters/out/persistence/InMemoryUserRepository";
 import { InMemoryRefreshTokenRepository } from "./adapters/out/persistence/InMemoryRefreshTokenRepository";
 import { InMemoryConsentRepository } from "./adapters/out/persistence/InMemoryConsentRepository";
 import { InMemoryPasswordResetTokenRepository } from "./adapters/out/persistence/InMemoryPasswordResetTokenRepository";
+import { InMemoryMfaCredentialRepository } from "./adapters/out/persistence/InMemoryMfaCredentialRepository";
+import { InMemoryMfaChallengeRepository } from "./adapters/out/persistence/InMemoryMfaChallengeRepository";
 import { BcryptPasswordHasher } from "./adapters/out/security/BcryptPasswordHasher";
 import { JwtTokenService } from "./adapters/out/security/JwtTokenService";
 import { CryptoIdGenerator } from "./adapters/out/security/CryptoIdGenerator";
 import { RandomRefreshTokenGenerator } from "./adapters/out/security/RandomRefreshTokenGenerator";
 import { RandomPasswordResetTokenGenerator } from "./adapters/out/security/RandomPasswordResetTokenGenerator";
+import { RandomMfaChallengeGenerator } from "./adapters/out/security/RandomMfaChallengeGenerator";
 import { SystemClock } from "./adapters/out/time/SystemClock";
 import { FakePasswordResetNotifier } from "./test-support/FakePasswordResetNotifier";
+import { FakeTotpService } from "./test-support/FakeTotpService";
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const MFA_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 function buildTestContext(): { dependencies: ServerDependencies; passwordResetNotifier: FakePasswordResetNotifier } {
   const userRepository = new InMemoryUserRepository();
   const refreshTokenRepository = new InMemoryRefreshTokenRepository();
   const consentRepository = new InMemoryConsentRepository();
   const passwordResetTokenRepository = new InMemoryPasswordResetTokenRepository();
+  const mfaCredentialRepository = new InMemoryMfaCredentialRepository();
+  const mfaChallengeRepository = new InMemoryMfaChallengeRepository();
   const passwordHasher = new BcryptPasswordHasher();
   const tokenService = new JwtTokenService("test-secret");
   const idGenerator = new CryptoIdGenerator();
   const refreshTokenGenerator = new RandomRefreshTokenGenerator();
   const passwordResetTokenGenerator = new RandomPasswordResetTokenGenerator();
+  const mfaChallengeGenerator = new RandomMfaChallengeGenerator();
   const passwordResetNotifier = new FakePasswordResetNotifier();
+  const totpService = new FakeTotpService();
   const clock = new SystemClock();
 
   const sessionIssuer = new SessionIssuer(
@@ -49,11 +65,24 @@ function buildTestContext(): { dependencies: ServerDependencies; passwordResetNo
     clock,
     REFRESH_TOKEN_TTL_MS,
   );
+  const mfaChallengeIssuer = new MfaChallengeIssuer(
+    mfaChallengeRepository,
+    mfaChallengeGenerator,
+    idGenerator,
+    clock,
+    MFA_CHALLENGE_TTL_MS,
+  );
 
   return {
     dependencies: {
       registerUser: new RegisterUserUseCase(userRepository, passwordHasher, idGenerator),
-      authenticateUser: new AuthenticateUserUseCase(userRepository, passwordHasher, sessionIssuer),
+      authenticateUser: new AuthenticateUserUseCase(
+        userRepository,
+        passwordHasher,
+        sessionIssuer,
+        mfaCredentialRepository,
+        mfaChallengeIssuer,
+      ),
       refreshAccessToken: new RefreshAccessTokenUseCase(refreshTokenRepository, sessionIssuer, clock),
       logout: new LogoutUseCase(refreshTokenRepository, clock),
       requestPasswordReset: new RequestPasswordResetUseCase(
@@ -76,6 +105,20 @@ function buildTestContext(): { dependencies: ServerDependencies; passwordResetNo
       updateProfile: new UpdateProfileUseCase(userRepository),
       recordConsent: new RecordConsentUseCase(userRepository, consentRepository, idGenerator, clock),
       listConsentHistory: new ListConsentHistoryUseCase(consentRepository),
+      deleteAccount: new DeleteAccountUseCase(
+        userRepository,
+        passwordHasher,
+        refreshTokenRepository,
+        passwordResetTokenRepository,
+        mfaCredentialRepository,
+        idGenerator,
+        clock,
+      ),
+      enrollMfa: new EnrollMfaUseCase(userRepository, passwordHasher, mfaCredentialRepository, totpService, idGenerator, clock),
+      confirmMfaEnrollment: new ConfirmMfaEnrollmentUseCase(userRepository, mfaCredentialRepository, totpService, clock),
+      disableMfa: new DisableMfaUseCase(userRepository, passwordHasher, mfaCredentialRepository, clock),
+      getMfaStatus: new GetMfaStatusUseCase(userRepository, mfaCredentialRepository),
+      completeMfaLogin: new CompleteMfaLoginUseCase(mfaChallengeRepository, mfaCredentialRepository, totpService, sessionIssuer, clock),
       tokenService,
     },
     passwordResetNotifier,
@@ -496,6 +539,351 @@ describe("Password Reset HTTP API (RF-005)", () => {
     const app = createServer(dependencies);
 
     const response = await request(app).post("/auth/password-reset/confirm").send({});
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe("Account Deletion HTTP API (RF-007)", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    app = createServer(buildTestDependencies());
+  });
+
+  it("anonymizes the account when the confirmation password is correct", async () => {
+    const token = await registerAndLogin(app);
+
+    const deleteResponse = await request(app)
+      .delete("/users/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ password: "StrongPass1" });
+
+    expect(deleteResponse.status).toBe(204);
+  });
+
+  it("blocks login with the original credentials after deletion", async () => {
+    await registerAndLogin(app);
+    const secondLoginToken = await registerAndLogin(app, "second@example.com");
+
+    await request(app)
+      .delete("/users/me")
+      .set("Authorization", `Bearer ${secondLoginToken}`)
+      .send({ password: "StrongPass1" });
+
+    const loginAfterDeletion = await request(app)
+      .post("/auth/login")
+      .send({ email: "second@example.com", password: "StrongPass1" });
+    expect(loginAfterDeletion.status).toBe(401);
+  });
+
+  it("revokes the refresh token used to authenticate, invalidating the session", async () => {
+    await request(app).post("/auth/register").send({ email: "user@example.com", password: "StrongPass1" });
+    const loginResponse = await request(app)
+      .post("/auth/login")
+      .send({ email: "user@example.com", password: "StrongPass1" });
+
+    await request(app)
+      .delete("/users/me")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`)
+      .send({ password: "StrongPass1" });
+
+    const refreshResponse = await request(app)
+      .post("/auth/refresh")
+      .send({ refreshToken: loginResponse.body.refreshToken });
+    expect(refreshResponse.status).toBe(401);
+  });
+
+  it("rejects deletion with an incorrect confirmation password", async () => {
+    const token = await registerAndLogin(app);
+
+    const response = await request(app)
+      .delete("/users/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ password: "WrongPass1" });
+
+    expect(response.status).toBe(401);
+
+    // The account must remain fully usable after a failed deletion attempt.
+    const stillWorksLogin = await request(app)
+      .post("/auth/login")
+      .send({ email: "user@example.com", password: "StrongPass1" });
+    expect(stillWorksLogin.status).toBe(200);
+  });
+
+  it("rejects a request body without a password field instead of returning a 500", async () => {
+    const token = await registerAndLogin(app);
+
+    const response = await request(app).delete("/users/me").set("Authorization", `Bearer ${token}`).send({});
+
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects requests without a valid token", async () => {
+    const response = await request(app).delete("/users/me").send({ password: "StrongPass1" });
+
+    expect(response.status).toBe(401);
+  });
+});
+
+describe("MFA HTTP API (RF-004)", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    app = createServer(buildTestDependencies());
+  });
+
+  describe("GET /users/me/mfa", () => {
+    it("reports disabled for a user who never enrolled", async () => {
+      const token = await registerAndLogin(app);
+
+      const response = await request(app).get("/users/me/mfa").set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ enabled: false });
+    });
+
+    it("rejects requests without a valid token", async () => {
+      const response = await request(app).get("/users/me/mfa");
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe("POST /users/me/mfa/enroll and POST /users/me/mfa/confirm", () => {
+    it("completes the full enroll → confirm cycle and reports enabled afterwards", async () => {
+      const token = await registerAndLogin(app);
+
+      const enrollResponse = await request(app)
+        .post("/users/me/mfa/enroll")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ password: "StrongPass1" });
+      expect(enrollResponse.status).toBe(201);
+      expect(enrollResponse.body.secret).toBeDefined();
+      expect(enrollResponse.body.otpauthUrl).toContain("otpauth://");
+
+      const statusBeforeConfirm = await request(app).get("/users/me/mfa").set("Authorization", `Bearer ${token}`);
+      expect(statusBeforeConfirm.body.enabled).toBe(false);
+
+      const confirmResponse = await request(app)
+        .post("/users/me/mfa/confirm")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ code: `valid-code-for-${enrollResponse.body.secret}` });
+      expect(confirmResponse.status).toBe(200);
+
+      const statusAfterConfirm = await request(app).get("/users/me/mfa").set("Authorization", `Bearer ${token}`);
+      expect(statusAfterConfirm.body.enabled).toBe(true);
+    });
+
+    it("rejects enrollment with an incorrect confirmation password", async () => {
+      const token = await registerAndLogin(app);
+
+      const response = await request(app)
+        .post("/users/me/mfa/enroll")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ password: "WrongPass1" });
+
+      expect(response.status).toBe(401);
+    });
+
+    it("rejects confirmation with an invalid code", async () => {
+      const token = await registerAndLogin(app);
+      await request(app).post("/users/me/mfa/enroll").set("Authorization", `Bearer ${token}`).send({ password: "StrongPass1" });
+
+      const response = await request(app)
+        .post("/users/me/mfa/confirm")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ code: "000000" });
+
+      expect(response.status).toBe(401);
+    });
+
+    it("rejects confirmation when there is no pending enrollment", async () => {
+      const token = await registerAndLogin(app);
+
+      const response = await request(app)
+        .post("/users/me/mfa/confirm")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ code: "123456" });
+
+      expect(response.status).toBe(400);
+    });
+
+    it("rejects enroll requests without a password field instead of returning a 500", async () => {
+      const token = await registerAndLogin(app);
+
+      const response = await request(app).post("/users/me/mfa/enroll").set("Authorization", `Bearer ${token}`).send({});
+
+      expect(response.status).toBe(400);
+    });
+
+    it("rejects confirm requests without a code field instead of returning a 500", async () => {
+      const token = await registerAndLogin(app);
+
+      const response = await request(app).post("/users/me/mfa/confirm").set("Authorization", `Bearer ${token}`).send({});
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe("POST /users/me/mfa/disable", () => {
+    async function enrollAndConfirmMfa(app: Express, token: string) {
+      const enrollResponse = await request(app)
+        .post("/users/me/mfa/enroll")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ password: "StrongPass1" });
+      await request(app)
+        .post("/users/me/mfa/confirm")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ code: `valid-code-for-${enrollResponse.body.secret}` });
+    }
+
+    it("disables an active MFA credential when the password is correct", async () => {
+      const token = await registerAndLogin(app);
+      await enrollAndConfirmMfa(app, token);
+
+      const response = await request(app)
+        .post("/users/me/mfa/disable")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ password: "StrongPass1" });
+      expect(response.status).toBe(204);
+
+      const status = await request(app).get("/users/me/mfa").set("Authorization", `Bearer ${token}`);
+      expect(status.body.enabled).toBe(false);
+    });
+
+    it("rejects disabling with an incorrect confirmation password", async () => {
+      const token = await registerAndLogin(app);
+      await enrollAndConfirmMfa(app, token);
+
+      const response = await request(app)
+        .post("/users/me/mfa/disable")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ password: "WrongPass1" });
+
+      expect(response.status).toBe(401);
+    });
+
+    it("rejects disabling when there is no active MFA credential", async () => {
+      const token = await registerAndLogin(app);
+
+      const response = await request(app)
+        .post("/users/me/mfa/disable")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ password: "StrongPass1" });
+
+      expect(response.status).toBe(400);
+    });
+
+    it("rejects requests without a valid token", async () => {
+      const response = await request(app).post("/users/me/mfa/disable").send({ password: "StrongPass1" });
+
+      expect(response.status).toBe(401);
+    });
+  });
+});
+
+describe("MFA Login Integration HTTP API (RF-004, ADR-0012)", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    app = createServer(buildTestDependencies());
+  });
+
+  async function registerAndEnrollMfa(email = "user@example.com", password = "StrongPass1") {
+    const initialToken = await registerAndLogin(app, email, password);
+    const enrollResponse = await request(app)
+      .post("/users/me/mfa/enroll")
+      .set("Authorization", `Bearer ${initialToken}`)
+      .send({ password });
+    await request(app)
+      .post("/users/me/mfa/confirm")
+      .set("Authorization", `Bearer ${initialToken}`)
+      .send({ code: `valid-code-for-${enrollResponse.body.secret}` });
+  }
+
+  it("POST /auth/login returns mfaRequired:false and tokens directly when MFA is not active", async () => {
+    await request(app).post("/auth/register").send({ email: "user@example.com", password: "StrongPass1" });
+
+    const response = await request(app)
+      .post("/auth/login")
+      .send({ email: "user@example.com", password: "StrongPass1" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.mfaRequired).toBe(false);
+    expect(typeof response.body.token).toBe("string");
+    expect(typeof response.body.refreshToken).toBe("string");
+  });
+
+  it("POST /auth/login returns a challenge instead of tokens when MFA is active", async () => {
+    await registerAndEnrollMfa();
+
+    const response = await request(app)
+      .post("/auth/login")
+      .send({ email: "user@example.com", password: "StrongPass1" });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ mfaRequired: true, challengeToken: response.body.challengeToken });
+    expect(typeof response.body.challengeToken).toBe("string");
+  });
+
+  it("completes login via POST /auth/login/mfa with a valid challenge and code", async () => {
+    await registerAndEnrollMfa();
+    const loginResponse = await request(app)
+      .post("/auth/login")
+      .send({ email: "user@example.com", password: "StrongPass1" });
+
+    const mfaLoginResponse = await request(app).post("/auth/login/mfa").send({
+      challengeToken: loginResponse.body.challengeToken,
+      code: "valid-code-for-FAKE_SECRET",
+    });
+
+    expect(mfaLoginResponse.status).toBe(200);
+    expect(typeof mfaLoginResponse.body.token).toBe("string");
+    expect(typeof mfaLoginResponse.body.refreshToken).toBe("string");
+
+    const profileResponse = await request(app)
+      .get("/users/me")
+      .set("Authorization", `Bearer ${mfaLoginResponse.body.token}`);
+    expect(profileResponse.status).toBe(200);
+  });
+
+  it("rejects reuse of an already-completed challenge", async () => {
+    await registerAndEnrollMfa();
+    const loginResponse = await request(app)
+      .post("/auth/login")
+      .send({ email: "user@example.com", password: "StrongPass1" });
+    const body = { challengeToken: loginResponse.body.challengeToken, code: "valid-code-for-FAKE_SECRET" };
+
+    await request(app).post("/auth/login/mfa").send(body);
+    const secondAttempt = await request(app).post("/auth/login/mfa").send(body);
+
+    expect(secondAttempt.status).toBe(401);
+  });
+
+  it("rejects an incorrect TOTP code", async () => {
+    await registerAndEnrollMfa();
+    const loginResponse = await request(app)
+      .post("/auth/login")
+      .send({ email: "user@example.com", password: "StrongPass1" });
+
+    const response = await request(app)
+      .post("/auth/login/mfa")
+      .send({ challengeToken: loginResponse.body.challengeToken, code: "000000" });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects an unknown challenge token", async () => {
+    const response = await request(app)
+      .post("/auth/login/mfa")
+      .send({ challengeToken: "never-issued", code: "123456" });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a request body without challengeToken/code instead of returning a 500", async () => {
+    const response = await request(app).post("/auth/login/mfa").send({});
 
     expect(response.status).toBe(400);
   });

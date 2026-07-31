@@ -5,6 +5,7 @@ import { InMemoryUserRepository } from "../../adapters/out/persistence/InMemoryU
 import { InMemoryConsentRepository } from "../../adapters/out/persistence/InMemoryConsentRepository";
 import { UserNotFoundError } from "../../domain/user/errors/UserNotFoundError";
 import { InvalidConsentVersionError } from "../../domain/user/errors/InvalidConsentVersionError";
+import { Email } from "../../domain/user/Email";
 import { FakePasswordHasher } from "../../test-support/FakePasswordHasher";
 import { SequentialIdGenerator } from "../../test-support/SequentialIdGenerator";
 import { FixedClock } from "../../test-support/FixedClock";
@@ -53,6 +54,21 @@ describe("RecordConsentUseCase", () => {
 
   it("rejects a userId that does not exist", async () => {
     await expect(useCase.execute({ userId: "ghost", version: "privacy-policy-v1" })).rejects.toThrow(
+      UserNotFoundError,
+    );
+  });
+
+  it("rejects recording consent for an anonymized (deleted) account (RF-007)", async () => {
+    const user = await userRepository.findById("user-1");
+    await userRepository.update(
+      user!.anonymize({
+        email: Email.create("deleted-user-1@anonymized.financepulse.internal"),
+        passwordHash: "unusable-hash",
+        deletedAt: ACCEPTED_AT,
+      }),
+    );
+
+    await expect(useCase.execute({ userId: "user-1", version: "privacy-policy-v1" })).rejects.toThrow(
       UserNotFoundError,
     );
   });

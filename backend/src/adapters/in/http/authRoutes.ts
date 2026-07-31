@@ -5,10 +5,12 @@ import { RefreshAccessTokenUseCase } from "../../../application/use-cases/Refres
 import { LogoutUseCase } from "../../../application/use-cases/LogoutUseCase";
 import { RequestPasswordResetUseCase } from "../../../application/use-cases/RequestPasswordResetUseCase";
 import { ResetPasswordUseCase } from "../../../application/use-cases/ResetPasswordUseCase";
+import { CompleteMfaLoginUseCase } from "../../../application/use-cases/CompleteMfaLoginUseCase";
 import { parseCredentials } from "./parseCredentials";
 import { parseRefreshToken } from "./parseRefreshToken";
 import { parsePasswordResetRequest } from "./parsePasswordResetRequest";
 import { parsePasswordResetConfirmation } from "./parsePasswordResetConfirmation";
+import { parseMfaLoginConfirmation } from "./parseMfaLoginConfirmation";
 
 export interface AuthRoutesDependencies {
   registerUser: RegisterUserUseCase;
@@ -17,6 +19,7 @@ export interface AuthRoutesDependencies {
   logout: LogoutUseCase;
   requestPasswordReset: RequestPasswordResetUseCase;
   resetPassword: ResetPasswordUseCase;
+  completeMfaLogin: CompleteMfaLoginUseCase;
 }
 
 export function createAuthRouter(deps: AuthRoutesDependencies): Router {
@@ -36,6 +39,20 @@ export function createAuthRouter(deps: AuthRoutesDependencies): Router {
     try {
       const { email, password } = parseCredentials(req.body);
       const result = await deps.authenticateUser.execute({ email, password });
+      if (result.mfaRequired) {
+        res.status(200).json({ mfaRequired: true, challengeToken: result.challengeToken });
+      } else {
+        res.status(200).json({ mfaRequired: false, token: result.token, refreshToken: result.refreshToken });
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/login/mfa", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { challengeToken, code } = parseMfaLoginConfirmation(req.body);
+      const result = await deps.completeMfaLogin.execute({ challengeToken, code });
       res.status(200).json({ token: result.token, refreshToken: result.refreshToken });
     } catch (error) {
       next(error);

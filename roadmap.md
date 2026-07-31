@@ -32,11 +32,12 @@ O MVP foi decomposto em 13 fases, seguindo a ordem de dependência natural do do
 | Fase | Nome | Requisitos do vision.md | Depende de | Status |
 |---|---|---|---|---|
 | 1 | Fundação técnica + Cadastro e Login | RF-001, RF-002, RF-003, RF-008 | — | ✅ Concluída |
-| 2.1 | Refresh token e logout | RF-008 (renovação segura) | Fase 1 | 🟡 Aguardando aprovação |
-| 2.2 | Edição de perfil e consentimento LGPD | RF-006, RF-046 | Fase 2.1 | 🟡 Aguardando aprovação |
-| 2.3 | Recuperação de senha | RF-005 | Fase 2.1 | 🟡 Aguardando aprovação |
-| 2.4 | Exclusão de conta (LGPD) | RF-007 | Fase 2.1 | ⬜ Não iniciada |
-| 2.5 | Autenticação multifator (MFA) | RF-004 | Fase 2.1 | ⬜ Não iniciada |
+| 2.1 | Refresh token e logout | RF-008 (renovação segura) | Fase 1 | ✅ Concluída |
+| 2.2 | Edição de perfil e consentimento LGPD | RF-006, RF-046 | Fase 2.1 | ✅ Concluída |
+| 2.3 | Recuperação de senha | RF-005 | Fase 2.1 | ✅ Concluída |
+| 2.4 | Exclusão de conta (LGPD) | RF-007 | Fase 2.1 | ✅ Concluída |
+| 2.5.1 | MFA — cadastro e gestão (enroll/confirm/disable/status) | RF-004 | Fase 2.1 | ✅ Concluída |
+| 2.5.2 | MFA — integração com o fluxo de login | RF-004 | Fase 2.5.1 | 🟡 Aguardando aprovação |
 | 3 | Contas e Carteiras Financeiras | RF-009 a RF-013 | Fase 1 | ⬜ Não iniciada |
 | 4 | Transações (manuais e importação) | RF-014 a RF-021 | Fase 3 | ⬜ Não iniciada |
 | 5 | Categorização | RF-022 a RF-025 | Fase 4 | ⬜ Não iniciada |
@@ -76,4 +77,7 @@ Fases futuras, fora do escopo atual, mantidas aqui apenas para rastreabilidade. 
 | 1 | ✅ [docs/cto/fase-01-aprovacao.md](docs/cto/fase-01-aprovacao.md) | ✅ (autorização para iniciar a Fase 2) | [0001](docs/adr/0001-stack-tecnologica-backend.md), [0002](docs/adr/0002-arquitetura-hexagonal-backend.md), [0003](docs/adr/0003-persistencia-fase-1.md), [0004](docs/adr/0004-sequenciamento-backend-first.md), [0005](docs/adr/0005-autenticacao-e-sessao.md) | [docs/qa/fase-01-review.md](docs/qa/fase-01-review.md) |
 | 2.1 | ✅ [docs/cto/fase-02-1-aprovacao.md](docs/cto/fase-02-1-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.2) | [0006](docs/adr/0006-decomposicao-fase-2.md), [0007](docs/adr/0007-estrategia-refresh-token.md) | [docs/qa/fase-02-1-review.md](docs/qa/fase-02-1-review.md) |
 | 2.2 | ✅ [docs/cto/fase-02-2-aprovacao.md](docs/cto/fase-02-2-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.3) | [0008](docs/adr/0008-perfil-e-consentimento.md) | [docs/qa/fase-02-2-review.md](docs/qa/fase-02-2-review.md) |
-| 2.3 | ✅ [docs/cto/fase-02-3-aprovacao.md](docs/cto/fase-02-3-aprovacao.md) | *aguardando* | [0009](docs/adr/0009-recuperacao-de-senha.md) | [docs/qa/fase-02-3-review.md](docs/qa/fase-02-3-review.md) |
+| 2.3 | ✅ [docs/cto/fase-02-3-aprovacao.md](docs/cto/fase-02-3-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.4) | [0009](docs/adr/0009-recuperacao-de-senha.md) | [docs/qa/fase-02-3-review.md](docs/qa/fase-02-3-review.md) |
+| 2.4 | ✅ [docs/cto/fase-02-4-aprovacao.md](docs/cto/fase-02-4-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.5.1) | [0010](docs/adr/0010-exclusao-de-conta.md) | [docs/qa/fase-02-4-review.md](docs/qa/fase-02-4-review.md) |
+| 2.5.1 | ✅ [docs/cto/fase-02-5-1-aprovacao.md](docs/cto/fase-02-5-1-aprovacao.md) | ✅ (autorização para completar a Fase 2.5) | [0011](docs/adr/0011-mfa-totp.md) | [docs/qa/fase-02-5-1-review.md](docs/qa/fase-02-5-1-review.md) |
+| 2.5.2 | ✅ [docs/cto/fase-02-5-2-aprovacao.md](docs/cto/fase-02-5-2-aprovacao.md) | *aguardando* | [0012](docs/adr/0012-mfa-integracao-login.md) | [docs/qa/fase-02-5-2-review.md](docs/qa/fase-02-5-2-review.md) |

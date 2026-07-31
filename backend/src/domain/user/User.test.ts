@@ -81,4 +81,36 @@ describe("User", () => {
     // withPassword does not mutate the original instance.
     expect(user.passwordHash).toBe("old-hash");
   });
+
+  it("is not deleted by default", () => {
+    const user = User.register({ id: "user-1", email: Email.create("user@example.com"), passwordHash: "hashed" });
+
+    expect(user.isDeleted()).toBe(false);
+    expect(user.deletedAt).toBeNull();
+  });
+
+  it("anonymizes a user, replacing email/name/password and recording deletedAt (RF-007)", () => {
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    const deletedAt = new Date("2026-02-01T00:00:00.000Z");
+    const user = User.register({
+      id: "user-1",
+      email: Email.create("user@example.com"),
+      passwordHash: "hashed-value",
+      name: "Ana Souza",
+      createdAt,
+    });
+
+    const anonymizedEmail = Email.create("deleted-user-1@anonymized.financepulse.internal");
+    const anonymized = user.anonymize({ email: anonymizedEmail, passwordHash: "unusable-hash", deletedAt });
+
+    expect(anonymized.id).toBe("user-1");
+    expect(anonymized.email.equals(anonymizedEmail)).toBe(true);
+    expect(anonymized.name).toBeNull();
+    expect(anonymized.passwordHash).toBe("unusable-hash");
+    expect(anonymized.deletedAt).toBe(deletedAt);
+    expect(anonymized.isDeleted()).toBe(true);
+    expect(anonymized.createdAt).toBe(createdAt);
+    // anonymize does not mutate the original instance.
+    expect(user.isDeleted()).toBe(false);
+  });
 });

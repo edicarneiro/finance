@@ -16,7 +16,7 @@ export class UpdateProfileUseCase {
 
   async execute(input: UpdateProfileInput): Promise<ProfileView> {
     const user = await this.userRepository.findById(input.userId);
-    if (!user) {
+    if (!user || user.isDeleted()) {
       throw new UserNotFoundError();
     }
 

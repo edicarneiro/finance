@@ -8,6 +8,9 @@ import { InvalidConsentVersionError } from "../../../domain/user/errors/InvalidC
 import { UserNotFoundError } from "../../../domain/user/errors/UserNotFoundError";
 import { InvalidRefreshTokenError } from "../../../domain/session/errors/InvalidRefreshTokenError";
 import { InvalidOrExpiredResetTokenError } from "../../../domain/user/errors/InvalidOrExpiredResetTokenError";
+import { MfaNotEnrolledError } from "../../../domain/user/errors/MfaNotEnrolledError";
+import { InvalidMfaCodeError } from "../../../domain/user/errors/InvalidMfaCodeError";
+import { InvalidOrExpiredMfaChallengeError } from "../../../domain/user/errors/InvalidOrExpiredMfaChallengeError";
 import { InvalidRequestBodyError } from "./errors/InvalidRequestBodyError";
 
 const CLIENT_ERROR_TYPES = [
@@ -16,9 +19,16 @@ const CLIENT_ERROR_TYPES = [
   WeakPasswordError,
   InvalidNameError,
   InvalidConsentVersionError,
+  MfaNotEnrolledError,
   InvalidRequestBodyError,
 ];
-const UNAUTHORIZED_ERROR_TYPES = [InvalidCredentialsError, InvalidRefreshTokenError, InvalidOrExpiredResetTokenError];
+const UNAUTHORIZED_ERROR_TYPES = [
+  InvalidCredentialsError,
+  InvalidRefreshTokenError,
+  InvalidOrExpiredResetTokenError,
+  InvalidMfaCodeError,
+  InvalidOrExpiredMfaChallengeError,
+];
 const NOT_FOUND_ERROR_TYPES = [UserNotFoundError];
 
 /**

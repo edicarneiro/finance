@@ -94,4 +94,33 @@ describe("SqliteUserRepository", () => {
     expect(found?.name).toBe("Ana Souza");
     expect(found?.passwordHash).toBe("new-hash");
   });
+
+  it("persists anonymization (deletedAt, redacted email/name/password) made via update() (RF-007)", async () => {
+    const email = Email.create("user@example.com");
+    const user = User.register({ id: "user-1", email, passwordHash: "hashed-value", name: "Ana Souza" });
+    await repository.save(user);
+
+    const deletedAt = new Date("2026-02-01T00:00:00.000Z");
+    const anonymizedEmail = Email.create("deleted-user-1@anonymized.financepulse.internal");
+    await repository.update(
+      user.anonymize({ email: anonymizedEmail, passwordHash: "unusable-hash", deletedAt }),
+    );
+
+    const found = await repository.findById("user-1");
+    expect(found?.isDeleted()).toBe(true);
+    expect(found?.deletedAt).toEqual(deletedAt);
+    expect(found?.name).toBeNull();
+    expect(found?.email.equals(anonymizedEmail)).toBe(true);
+    expect(found?.passwordHash).toBe("unusable-hash");
+    // The original email must no longer resolve to this (now anonymized) account.
+    expect(await repository.findByEmail(email)).toBeNull();
+  });
+
+  it("defaults deletedAt to null for a freshly registered user", async () => {
+    await repository.save(User.register({ id: "user-1", email: Email.create("user@example.com"), passwordHash: "a" }));
+
+    const found = await repository.findById("user-1");
+    expect(found?.isDeleted()).toBe(false);
+    expect(found?.deletedAt).toBeNull();
+  });
 });

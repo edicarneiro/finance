@@ -16,7 +16,7 @@ export class GetProfileUseCase {
 
   async execute(input: GetProfileInput): Promise<ProfileView> {
     const user = await this.userRepository.findById(input.userId);
-    if (!user) {
+    if (!user || user.isDeleted()) {
       throw new UserNotFoundError();
     }
 

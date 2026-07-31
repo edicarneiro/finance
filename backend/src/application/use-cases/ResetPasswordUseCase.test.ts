@@ -4,15 +4,19 @@ import { RequestPasswordResetUseCase } from "./RequestPasswordResetUseCase";
 import { RegisterUserUseCase } from "./RegisterUserUseCase";
 import { AuthenticateUserUseCase } from "./AuthenticateUserUseCase";
 import { SessionIssuer } from "../services/SessionIssuer";
+import { MfaChallengeIssuer } from "../services/MfaChallengeIssuer";
 import { InMemoryUserRepository } from "../../adapters/out/persistence/InMemoryUserRepository";
 import { InMemoryPasswordResetTokenRepository } from "../../adapters/out/persistence/InMemoryPasswordResetTokenRepository";
 import { InMemoryRefreshTokenRepository } from "../../adapters/out/persistence/InMemoryRefreshTokenRepository";
+import { InMemoryMfaCredentialRepository } from "../../adapters/out/persistence/InMemoryMfaCredentialRepository";
+import { InMemoryMfaChallengeRepository } from "../../adapters/out/persistence/InMemoryMfaChallengeRepository";
 import { InvalidOrExpiredResetTokenError } from "../../domain/user/errors/InvalidOrExpiredResetTokenError";
 import { WeakPasswordError } from "../../domain/user/errors/WeakPasswordError";
 import { FakePasswordHasher } from "../../test-support/FakePasswordHasher";
 import { SequentialIdGenerator } from "../../test-support/SequentialIdGenerator";
 import { SequentialPasswordResetTokenGenerator } from "../../test-support/SequentialPasswordResetTokenGenerator";
 import { SequentialRefreshTokenGenerator } from "../../test-support/SequentialRefreshTokenGenerator";
+import { SequentialMfaChallengeGenerator } from "../../test-support/SequentialMfaChallengeGenerator";
 import { FakeTokenService } from "../../test-support/FakeTokenService";
 import { FakePasswordResetNotifier } from "../../test-support/FakePasswordResetNotifier";
 import { FixedClock } from "../../test-support/FixedClock";
@@ -20,6 +24,7 @@ import { FixedClock } from "../../test-support/FixedClock";
 const NOW = new Date("2026-01-01T00:00:00.000Z");
 const RESET_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 describe("ResetPasswordUseCase", () => {
   let userRepository: InMemoryUserRepository;
@@ -81,13 +86,29 @@ describe("ResetPasswordUseCase", () => {
       clock,
       REFRESH_TTL_MS,
     );
-    const authenticate = new AuthenticateUserUseCase(userRepository, passwordHasher, sessionIssuer);
-    const { refreshToken } = await authenticate.execute({ email: "user@example.com", password: "StrongPass1" });
+    const mfaChallengeIssuer = new MfaChallengeIssuer(
+      new InMemoryMfaChallengeRepository(),
+      new SequentialMfaChallengeGenerator(),
+      new SequentialIdGenerator("challenge"),
+      clock,
+      CHALLENGE_TTL_MS,
+    );
+    const authenticate = new AuthenticateUserUseCase(
+      userRepository,
+      passwordHasher,
+      sessionIssuer,
+      new InMemoryMfaCredentialRepository(),
+      mfaChallengeIssuer,
+    );
+    const result = await authenticate.execute({ email: "user@example.com", password: "StrongPass1" });
+    if (result.mfaRequired) {
+      throw new Error("Test setup error: MFA should not be active for this user.");
+    }
 
     await requestReset.execute({ email: "user@example.com" });
     await useCase.execute({ token: "reset-token-1", newPassword: "NewStrongPass1" });
 
-    const session = await refreshTokenRepository.findByRawToken(refreshToken);
+    const session = await refreshTokenRepository.findByRawToken(result.refreshToken);
     expect(session?.isRevoked()).toBe(true);
   });
 
