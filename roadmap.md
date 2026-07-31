@@ -61,7 +61,7 @@ O MVP foi decomposto em 13 fases, seguindo a ordem de dependência natural do do
 | 2.3 | Recuperação de senha | RF-005 | Fase 2.1 | ✅ Concluída |
 | 2.4 | Exclusão de conta (LGPD) | RF-007 | Fase 2.1 | ✅ Concluída |
 | 2.5.1 | MFA — cadastro e gestão (enroll/confirm/disable/status) | RF-004 | Fase 2.1 | ✅ Concluída |
-| 2.5.2 | MFA — integração com o fluxo de login | RF-004 | Fase 2.5.1 | 🟡 Aguardando aprovação |
+| 2.5.2 | MFA — integração com o fluxo de login | RF-004 | Fase 2.5.1 | ✅ Concluída |
 | 3 | Contas e Carteiras Financeiras (Java — ver ADR-0014) | RF-009 a RF-013 | Fase 1 | 🟡 Aguardando aprovação |
 | 4 | Transações (manuais e importação) | RF-014 a RF-021 | Fase 3 | ⬜ Não iniciada |
 | 5 | Categorização | RF-022 a RF-025 | Fase 4 | ⬜ Não iniciada |
@@ -104,5 +104,5 @@ Fases futuras, fora do escopo atual, mantidas aqui apenas para rastreabilidade. 
 | 2.3 | ✅ [docs/cto/fase-02-3-aprovacao.md](docs/cto/fase-02-3-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.4) | [0009](docs/adr/0009-recuperacao-de-senha.md) | [docs/qa/fase-02-3-review.md](docs/qa/fase-02-3-review.md) |
 | 2.4 | ✅ [docs/cto/fase-02-4-aprovacao.md](docs/cto/fase-02-4-aprovacao.md) | ✅ (autorização para iniciar a Fase 2.5.1) | [0010](docs/adr/0010-exclusao-de-conta.md) | [docs/qa/fase-02-4-review.md](docs/qa/fase-02-4-review.md) |
 | 2.5.1 | ✅ [docs/cto/fase-02-5-1-aprovacao.md](docs/cto/fase-02-5-1-aprovacao.md) | ✅ (autorização para completar a Fase 2.5) | [0011](docs/adr/0011-mfa-totp.md) | [docs/qa/fase-02-5-1-review.md](docs/qa/fase-02-5-1-review.md) |
-| 2.5.2 | ✅ [docs/cto/fase-02-5-2-aprovacao.md](docs/cto/fase-02-5-2-aprovacao.md) | *aguardando* | [0012](docs/adr/0012-mfa-integracao-login.md) | [docs/qa/fase-02-5-2-review.md](docs/qa/fase-02-5-2-review.md) |
+| 2.5.2 | ✅ [docs/cto/fase-02-5-2-aprovacao.md](docs/cto/fase-02-5-2-aprovacao.md) | ✅ (confirmada em 2026-07-31, retroativa — encerra a Fase 2 por completo) | [0012](docs/adr/0012-mfa-integracao-login.md) | [docs/qa/fase-02-5-2-review.md](docs/qa/fase-02-5-2-review.md) |
 | 3 (Java) | ✅ [docs/cto/fase-03-java-aprovacao.md](docs/cto/fase-03-java-aprovacao.md) | *aguardando* | [0014](docs/adr/0014-fase-3-contas-carteiras-java.md), [0015](docs/adr/0015-upgrade-java-25.md) | [docs/qa/fase-03-java-review.md](docs/qa/fase-03-java-review.md) |

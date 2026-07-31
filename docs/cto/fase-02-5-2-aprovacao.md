@@ -37,3 +37,7 @@ O QA identificou que `DeleteAccountUseCase` não desativava a credencial MFA do 
 **A Fase 2.5.2 está aprovada — e com ela, a Fase 2 completa.** RF-004 está implementado de ponta a ponta. Todos os requisitos de gestão de conta de usuário (RF-004 a RF-008, RF-046) estão agora entregues e validados.
 
 Conforme processo definido pelo stakeholder, esta aprovação encerra o ciclo interno dos agentes; a autorização para iniciar a Fase 3 (Contas e Carteiras Financeiras — primeira fase a introduzir dados financeiros reais, e portanto a primeira em que o isolamento multi-tenant de RF-047 se torna criticamente ativo) permanece com o stakeholder.
+
+## Confirmação do stakeholder (retroativa)
+
+Em 2026-07-31, o stakeholder confirmou explicitamente o encerramento da Fase 2.5.2 e, por consequência, da Fase 2 como um todo — atualizado em [roadmap.md](../../roadmap.md). Esta confirmação chega após a Fase 3 já ter sido iniciada e aprovada em Java (ver [ADR-0014](../adr/0014-fase-3-contas-carteiras-java.md)), consistente com a mudança de processo registrada em `rules.md` § 7 (a aprovação do stakeholder deixou de ser um bloqueio obrigatório para o início da fase seguinte).

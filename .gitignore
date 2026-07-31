@@ -1,8 +1,10 @@
 # Dependências
 node_modules/
 backend-java-tools/
-*.m2/
 target/
+
+# Sessões de ferramentas externas (ex.: extensões de "App Modernization" do VS Code)
+backend-java/.github/
 
 # Builds
 dist/
