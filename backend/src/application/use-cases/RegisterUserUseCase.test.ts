@@ -4,27 +4,8 @@ import { InMemoryUserRepository } from "../../adapters/out/persistence/InMemoryU
 import { Email } from "../../domain/user/Email";
 import { DuplicateEmailError } from "../../domain/user/errors/DuplicateEmailError";
 import { WeakPasswordError } from "../../domain/user/errors/WeakPasswordError";
-import type { PasswordHasher } from "../ports/PasswordHasher";
-import type { IdGenerator } from "../ports/IdGenerator";
-
-class FakePasswordHasher implements PasswordHasher {
-  async hash(plainPassword: string): Promise<string> {
-    return `hashed:${plainPassword}`;
-  }
-
-  async compare(plainPassword: string, passwordHash: string): Promise<boolean> {
-    return passwordHash === `hashed:${plainPassword}`;
-  }
-}
-
-class SequentialIdGenerator implements IdGenerator {
-  private counter = 0;
-
-  generate(): string {
-    this.counter += 1;
-    return `user-${this.counter}`;
-  }
-}
+import { FakePasswordHasher } from "../../test-support/FakePasswordHasher";
+import { SequentialIdGenerator } from "../../test-support/SequentialIdGenerator";
 
 describe("RegisterUserUseCase", () => {
   let userRepository: InMemoryUserRepository;
@@ -32,7 +13,7 @@ describe("RegisterUserUseCase", () => {
 
   beforeEach(() => {
     userRepository = new InMemoryUserRepository();
-    useCase = new RegisterUserUseCase(userRepository, new FakePasswordHasher(), new SequentialIdGenerator());
+    useCase = new RegisterUserUseCase(userRepository, new FakePasswordHasher(), new SequentialIdGenerator("user"));
   });
 
   it("registers a new user and persists a hashed password (RF-001)", async () => {

@@ -2,7 +2,7 @@ import { Email } from "../../domain/user/Email";
 import { InvalidCredentialsError } from "../../domain/user/errors/InvalidCredentialsError";
 import { UserRepository } from "../ports/UserRepository";
 import { PasswordHasher } from "../ports/PasswordHasher";
-import { TokenService } from "../ports/TokenService";
+import { SessionIssuer } from "../services/SessionIssuer";
 
 export interface AuthenticateUserInput {
   email: string;
@@ -11,13 +11,14 @@ export interface AuthenticateUserInput {
 
 export interface AuthenticateUserOutput {
   token: string;
+  refreshToken: string;
 }
 
 export class AuthenticateUserUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly passwordHasher: PasswordHasher,
-    private readonly tokenService: TokenService,
+    private readonly sessionIssuer: SessionIssuer,
   ) {}
 
   async execute(input: AuthenticateUserInput): Promise<AuthenticateUserOutput> {
@@ -32,7 +33,7 @@ export class AuthenticateUserUseCase {
       throw new InvalidCredentialsError();
     }
 
-    const token = this.tokenService.issue(user.id);
-    return { token };
+    const session = await this.sessionIssuer.issueFor(user.id);
+    return { token: session.accessToken, refreshToken: session.refreshToken };
   }
 }

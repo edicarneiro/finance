@@ -3,16 +3,18 @@ import { DuplicateEmailError } from "../../../domain/user/errors/DuplicateEmailE
 import { InvalidCredentialsError } from "../../../domain/user/errors/InvalidCredentialsError";
 import { InvalidEmailError } from "../../../domain/user/errors/InvalidEmailError";
 import { WeakPasswordError } from "../../../domain/user/errors/WeakPasswordError";
+import { InvalidRefreshTokenError } from "../../../domain/session/errors/InvalidRefreshTokenError";
 import { InvalidRequestBodyError } from "./errors/InvalidRequestBodyError";
 
 const CLIENT_ERROR_TYPES = [DuplicateEmailError, InvalidEmailError, WeakPasswordError, InvalidRequestBodyError];
+const UNAUTHORIZED_ERROR_TYPES = [InvalidCredentialsError, InvalidRefreshTokenError];
 
 /**
  * Maps domain errors to HTTP responses without leaking internals (stack traces,
  * driver-level messages) to the client, per rules.md §4 (Segurança).
  */
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
-  if (error instanceof InvalidCredentialsError) {
+  if (UNAUTHORIZED_ERROR_TYPES.some((ErrorType) => error instanceof ErrorType)) {
     res.status(401).json({ error: error.message });
     return;
   }

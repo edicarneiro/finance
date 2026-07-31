@@ -1,62 +1,46 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { AuthenticateUserUseCase } from "./AuthenticateUserUseCase";
 import { RegisterUserUseCase } from "./RegisterUserUseCase";
+import { SessionIssuer } from "../services/SessionIssuer";
 import { InMemoryUserRepository } from "../../adapters/out/persistence/InMemoryUserRepository";
+import { InMemoryRefreshTokenRepository } from "../../adapters/out/persistence/InMemoryRefreshTokenRepository";
 import { InvalidCredentialsError } from "../../domain/user/errors/InvalidCredentialsError";
-import type { PasswordHasher } from "../ports/PasswordHasher";
-import type { TokenService, TokenPayload } from "../ports/TokenService";
-import type { IdGenerator } from "../ports/IdGenerator";
+import { FakePasswordHasher } from "../../test-support/FakePasswordHasher";
+import { SequentialIdGenerator } from "../../test-support/SequentialIdGenerator";
+import { FakeTokenService } from "../../test-support/FakeTokenService";
+import { SequentialRefreshTokenGenerator } from "../../test-support/SequentialRefreshTokenGenerator";
+import { FixedClock } from "../../test-support/FixedClock";
 
-class FakePasswordHasher implements PasswordHasher {
-  async hash(plainPassword: string): Promise<string> {
-    return `hashed:${plainPassword}`;
-  }
-
-  async compare(plainPassword: string, passwordHash: string): Promise<boolean> {
-    return passwordHash === `hashed:${plainPassword}`;
-  }
-}
-
-class SequentialIdGenerator implements IdGenerator {
-  private counter = 0;
-
-  generate(): string {
-    this.counter += 1;
-    return `user-${this.counter}`;
-  }
-}
-
-class FakeTokenService implements TokenService {
-  issue(userId: string): string {
-    return `token-for-${userId}`;
-  }
-
-  verify(token: string): TokenPayload | null {
-    const match = /^token-for-(.+)$/.exec(token);
-    return match ? { userId: match[1] } : null;
-  }
-}
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 describe("AuthenticateUserUseCase", () => {
   let userRepository: InMemoryUserRepository;
   let passwordHasher: FakePasswordHasher;
-  let tokenService: FakeTokenService;
   let useCase: AuthenticateUserUseCase;
 
   beforeEach(async () => {
     userRepository = new InMemoryUserRepository();
     passwordHasher = new FakePasswordHasher();
-    tokenService = new FakeTokenService();
-    useCase = new AuthenticateUserUseCase(userRepository, passwordHasher, tokenService);
 
-    const registerUser = new RegisterUserUseCase(userRepository, passwordHasher, new SequentialIdGenerator());
+    const sessionIssuer = new SessionIssuer(
+      new FakeTokenService(),
+      new InMemoryRefreshTokenRepository(),
+      new SequentialRefreshTokenGenerator(),
+      new SequentialIdGenerator("session"),
+      new FixedClock(new Date("2026-01-01T00:00:00.000Z")),
+      REFRESH_TOKEN_TTL_MS,
+    );
+    useCase = new AuthenticateUserUseCase(userRepository, passwordHasher, sessionIssuer);
+
+    const registerUser = new RegisterUserUseCase(userRepository, passwordHasher, new SequentialIdGenerator("user"));
     await registerUser.execute({ email: "user@example.com", password: "StrongPass1" });
   });
 
-  it("issues a session token for valid credentials (RF-003, RF-008)", async () => {
+  it("issues an access token and a refresh token for valid credentials (RF-003, RF-008)", async () => {
     const result = await useCase.execute({ email: "user@example.com", password: "StrongPass1" });
 
     expect(result.token).toBe("token-for-user-1");
+    expect(result.refreshToken).toBe("refresh-token-1");
   });
 
   it("rejects authentication for a non-existent email", async () => {

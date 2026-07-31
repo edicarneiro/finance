@@ -31,8 +31,12 @@ O MVP foi decomposto em 13 fases, seguindo a ordem de dependência natural do do
 
 | Fase | Nome | Requisitos do vision.md | Depende de | Status |
 |---|---|---|---|---|
-| 1 | Fundação técnica + Cadastro e Login | RF-001, RF-002, RF-003, RF-008 | — | 🟡 Aguardando aprovação |
-| 2 | Gestão de Conta de Usuário | RF-004, RF-005, RF-006, RF-007, RF-046 | Fase 1 | ⬜ Não iniciada |
+| 1 | Fundação técnica + Cadastro e Login | RF-001, RF-002, RF-003, RF-008 | — | ✅ Concluída |
+| 2.1 | Refresh token e logout | RF-008 (renovação segura) | Fase 1 | 🟡 Aguardando aprovação |
+| 2.2 | Edição de perfil e consentimento LGPD | RF-006, RF-046 | Fase 2.1 | ⬜ Não iniciada |
+| 2.3 | Recuperação de senha | RF-005 | Fase 2.1 | ⬜ Não iniciada |
+| 2.4 | Exclusão de conta (LGPD) | RF-007 | Fase 2.1 | ⬜ Não iniciada |
+| 2.5 | Autenticação multifator (MFA) | RF-004 | Fase 2.1 | ⬜ Não iniciada |
 | 3 | Contas e Carteiras Financeiras | RF-009 a RF-013 | Fase 1 | ⬜ Não iniciada |
 | 4 | Transações (manuais e importação) | RF-014 a RF-021 | Fase 3 | ⬜ Não iniciada |
 | 5 | Categorização | RF-022 a RF-025 | Fase 4 | ⬜ Não iniciada |
@@ -45,7 +49,9 @@ O MVP foi decomposto em 13 fases, seguindo a ordem de dependência natural do do
 | 12 | Multi-tenancy Hardening e Backoffice | RF-047 a RF-050 | Todas as anteriores | ⬜ Não iniciada |
 | 13 | Frontend Web (MVP) | Interface para todas as funcionalidades acima | Fases 1 a 12 | ⬜ Não iniciada |
 
-**Nota de sequenciamento (decisão do CTO)**: as Fases 1 a 12 entregam a API backend; a Fase 13 entrega a interface web consumindo essa API já estabilizada. Isso evita retrabalho de UI a cada mudança de contrato durante a fase de maior instabilidade de API. Ver ADR correspondente em `docs/adr/`.
+**Nota de sequenciamento (decisão do CTO)**: as Fases 1 a 12 entregam a API backend; a Fase 13 entrega a interface web consumindo essa API já estabilizada. Isso evita retrabalho de UI a cada mudança de contrato durante a fase de maior instabilidade de API. Ver [ADR-0004](docs/adr/0004-sequenciamento-backend-first.md).
+
+**Nota sobre a Fase 2 (decisão do CTO)**: decomposta em subfases 2.1–2.5 para preservar a granularidade "uma fase = totalmente concluível antes da próxima". Ver [ADR-0006](docs/adr/0006-decomposicao-fase-2.md).
 
 ---
 
@@ -67,4 +73,5 @@ Fases futuras, fora do escopo atual, mantidas aqui apenas para rastreabilidade. 
 
 | Fase | Aprovação CTO | Aprovação Stakeholder | ADRs | Revisão QA |
 |---|---|---|---|---|
-| 1 | ✅ [docs/cto/fase-01-aprovacao.md](docs/cto/fase-01-aprovacao.md) | *aguardando* | [0001](docs/adr/0001-stack-tecnologica-backend.md), [0002](docs/adr/0002-arquitetura-hexagonal-backend.md), [0003](docs/adr/0003-persistencia-fase-1.md), [0004](docs/adr/0004-sequenciamento-backend-first.md), [0005](docs/adr/0005-autenticacao-e-sessao.md) | [docs/qa/fase-01-review.md](docs/qa/fase-01-review.md) |
+| 1 | ✅ [docs/cto/fase-01-aprovacao.md](docs/cto/fase-01-aprovacao.md) | ✅ (autorização para iniciar a Fase 2) | [0001](docs/adr/0001-stack-tecnologica-backend.md), [0002](docs/adr/0002-arquitetura-hexagonal-backend.md), [0003](docs/adr/0003-persistencia-fase-1.md), [0004](docs/adr/0004-sequenciamento-backend-first.md), [0005](docs/adr/0005-autenticacao-e-sessao.md) | [docs/qa/fase-01-review.md](docs/qa/fase-01-review.md) |
+| 2.1 | ✅ [docs/cto/fase-02-1-aprovacao.md](docs/cto/fase-02-1-aprovacao.md) | *aguardando* | [0006](docs/adr/0006-decomposicao-fase-2.md), [0007](docs/adr/0007-estrategia-refresh-token.md) | [docs/qa/fase-02-1-review.md](docs/qa/fase-02-1-review.md) |
