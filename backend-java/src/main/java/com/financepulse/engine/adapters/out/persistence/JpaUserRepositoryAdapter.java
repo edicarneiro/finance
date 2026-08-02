@@ -27,12 +27,24 @@ public class JpaUserRepositoryAdapter implements UserRepository {
 
     @Override
     public void save(User user) {
-        jpaRepository.save(new UserJpaEntity(
+        jpaRepository.save(toEntity(user));
+    }
+
+    @Override
+    public void update(User user) {
+        jpaRepository.save(toEntity(user));
+    }
+
+    private UserJpaEntity toEntity(User user) {
+        return new UserJpaEntity(
                 user.getId(),
                 user.getEmail().toString(),
                 user.getPasswordHash(),
                 user.getName(),
-                user.getCreatedAt()));
+                user.getCreatedAt(),
+                user.getDeletedAt().orElse(null),
+                user.getRole(),
+                user.getSuspendedAt().orElse(null));
     }
 
     private User toDomain(UserJpaEntity entity) {
@@ -41,6 +53,9 @@ public class JpaUserRepositoryAdapter implements UserRepository {
                 Email.create(entity.getEmail()),
                 entity.getPasswordHash(),
                 entity.getName(),
-                entity.getCreatedAt());
+                entity.getCreatedAt(),
+                entity.getDeletedAt(),
+                entity.getRole(),
+                entity.getSuspendedAt());
     }
 }

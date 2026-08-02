@@ -25,4 +25,9 @@ public class InMemoryUserRepository implements UserRepository {
     public void save(User user) {
         usersById.put(user.getId(), user);
     }
+
+    @Override
+    public void update(User user) {
+        usersById.put(user.getId(), user);
+    }
 }

@@ -3,9 +3,13 @@ package com.financepulse.engine.application.usecases.account;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.financepulse.engine.domain.account.AccountType;
+import com.financepulse.engine.domain.transaction.Transaction;
+import com.financepulse.engine.domain.transaction.TransactionType;
 import com.financepulse.engine.testsupport.InMemoryAccountRepository;
+import com.financepulse.engine.testsupport.InMemoryTransactionRepository;
 import com.financepulse.engine.testsupport.SequentialIdGenerator;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +23,7 @@ class ListAccountsUseCaseTest {
     void setUp() {
         accountRepository = new InMemoryAccountRepository();
         createAccount = new CreateAccountUseCase(accountRepository, new SequentialIdGenerator("account"));
-        useCase = new ListAccountsUseCase(accountRepository);
+        useCase = new ListAccountsUseCase(accountRepository, new InMemoryTransactionRepository());
     }
 
     @Test
@@ -51,5 +55,20 @@ class ListAccountsUseCaseTest {
         ListAccountsUseCase.Output result = useCase.execute(new ListAccountsUseCase.Input("user-without-accounts"));
 
         assertThat(result.accounts()).isEmpty();
+    }
+
+    @Test
+    void reflectsTransactionsInTheListedBalance() {
+        var transactionRepository = new InMemoryTransactionRepository();
+        var useCaseWithTransactions = new ListAccountsUseCase(accountRepository, transactionRepository);
+        String accountId = createAccount
+                .execute(new CreateAccountUseCase.Input("user-1", AccountType.CHECKING, "Conta A", "BRL", new BigDecimal("100.00")))
+                .accountId();
+        transactionRepository.save(Transaction.create(
+                "tx-1", "user-1", accountId, "category-1", TransactionType.EXPENSE, new BigDecimal("30.00"), LocalDate.now(), null, null));
+
+        ListAccountsUseCase.Output result = useCaseWithTransactions.execute(new ListAccountsUseCase.Input("user-1"));
+
+        assertThat(result.accounts().get(0).balance()).isEqualByComparingTo("70.00");
     }
 }

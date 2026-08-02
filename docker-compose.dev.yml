@@ -1,0 +1,61 @@
+# ADR-0026: ambiente de desenvolvimento containerizado — nenhuma dependência local além de
+# Docker/Docker Compose é necessária. Uso: cp .env.example .env && docker compose -f docker-compose.dev.yml up --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-financepulse_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-fp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fp_password}
+    ports:
+      # 5433 no host: 5432 costuma já estar ocupado por outro Postgres local. A comunicação
+      # backend → postgres usa a rede interna do Compose na porta 5432, não afetada por isto —
+      # 5433 só importa se você quiser conectar um cliente psql da máquina host.
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fp_user} -d ${POSTGRES_DB:-financepulse_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend-java
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-financepulse_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-fp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fp_password}
+      FINANCEPULSE_JWT_SECRET: ${FINANCEPULSE_JWT_SECRET:-change-me-in-dev}
+      FINANCEPULSE_CORS_ALLOWED_ORIGINS: http://localhost:5173
+      FINANCEPULSE_SEED_ENABLED: ${FINANCEPULSE_SEED_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+    # Monta só o código-fonte (não o diretório inteiro) para preservar o Hot Module Reload sem
+    # sobrescrever o node_modules instalado dentro da imagem com o node_modules do host (que pode
+    # ter binários nativos de outra plataforma/arquitetura).
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

@@ -1,0 +1,13 @@
+# Configuração do perfil "dev" (ADR-0026): PostgreSQL via Docker Compose (docker-compose.dev.yml,
+# serviço "postgres") — não requer nenhuma instalação local de banco de dados. Seed de dados de
+# desenvolvimento habilitado (ver DevDataSeeder).
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:financepulse_dev}
+    driver-class-name: org.postgresql.Driver
+    username: ${POSTGRES_USER:fp_user}
+    password: ${POSTGRES_PASSWORD:fp_password}
+
+financepulse:
+  seed:
+    enabled: ${FINANCEPULSE_SEED_ENABLED:true}

@@ -392,6 +392,7 @@ O MVP do FinancePulse Engine deve entregar o ciclo completo de valor "registrar 
 - Notificações essenciais (estouro de orçamento, gasto atípico) (RF-040 a RF-043).
 - Conformidade LGPD básica: exportação e exclusão de dados (RF-044 a RF-046).
 - Isolamento multi-tenant e trilha de auditoria mínima (RF-047, RF-048).
+- **Infraestrutura e scripts para execução e testes do ambiente de desenvolvimento local reprodutível via Docker**: o ambiente de desenvolvimento (aplicação e banco de dados) deve subir com um único comando, sem exigir instalação manual de SDKs/runtimes na máquina do colaborador além do Docker/Docker Compose, com scripts de configuração, migrações de banco de dados e massa de dados inicial para testes disponíveis desde o início da Fase 1, antes de qualquer funcionalidade do MVP ser construída sobre ele (ver ADR-0026). Diferente dos demais itens desta lista, este nomeia a tecnologia de containerização por já ser uma decisão formalizada (não hipotética) — o restante deste documento permanece neutro quanto a stack, conforme Seção 12.
 
 **Explicitamente fora do MVP:**
 - Integração automática com bancos via Open Banking.
@@ -408,7 +409,7 @@ O MVP do FinancePulse Engine deve entregar o ciclo completo de valor "registrar 
 
 *(Fases sequenciais, sem datas fixas — sujeitas a priorização de negócio.)*
 
-**Fase 1 — MVP**: conforme Seção 14. Foco em validar o ciclo core de valor e a confiabilidade do cálculo financeiro.
+**Fase 1 — MVP**: conforme Seção 14, incluindo a fundação técnica de desenvolvimento local e testes (ambiente reproduzível, migrações de banco de dados, massa de dados inicial) como pré-requisito às demais funcionalidades da fase. Foco em validar o ciclo core de valor e a confiabilidade do cálculo financeiro.
 
 **Fase 2 — Automação e Engajamento**:
 - Integração com Open Banking (leitura) para importação automática de extratos.

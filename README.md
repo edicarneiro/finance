@@ -16,6 +16,138 @@ README.md           → Este documento
 
 ---
 
+## Como Rodar o Projeto Localmente
+
+> Guia técnico de desenvolvimento local (vision.md Seção 14). Reflete o stack **realmente decidido e construído** até o momento — ver [ADR-0026](docs/adr/0026-containerizacao-dev-postgresql.md) (containerização + PostgreSQL) e as demais ADRs em [docs/adr/](docs/adr/). Nenhuma tecnologia aqui é aspiracional; todo comando abaixo foi executado de verdade antes de ser documentado.
+
+### Opção 1 — Docker Compose (recomendado)
+
+Nenhuma dependência local além de **Docker** e **Docker Compose** — não precisa instalar JDK, Maven, Node ou PostgreSQL na máquina host.
+
+```bash
+git clone <url-do-repositório>
+cd finance
+cp .env.example .env
+docker compose -f docker-compose.dev.yml up --build -d
+```
+
+Sobe três serviços: `postgres` (PostgreSQL 16, porta host `5433` — `5432` costuma já estar ocupada por outro Postgres local; a comunicação interna backend↔postgres usa `5432` normalmente), `backend` (`http://localhost:8080`) e `frontend` (`http://localhost:5173`, com Hot Module Reload via bind mount do código-fonte). O backend só inicia depois que o Postgres reporta saudável (`depends_on: condition: service_healthy`).
+
+Acompanhar logs: `docker compose -f docker-compose.dev.yml logs -f`. Parar: `docker compose -f docker-compose.dev.yml down` (os dados do Postgres persistem no volume `postgres_data`; para descartá-los também, `down -v`).
+
+**Alterações no frontend** aparecem automaticamente (HMR). **Alterações no backend** exigem `docker compose -f docker-compose.dev.yml up --build -d` novamente (sem hot-reload em container — ver ADR-0026; para iteração rápida no backend, prefira a Opção 2 e mantenha só o `postgres` no Docker).
+
+### Opção 2 — Manual (sem Docker)
+
+Para quem prefere rodar os runtimes diretamente na máquina, ou iterar no backend sem rebuild de imagem:
+
+| Ferramenta | Versão usada neste projeto | Para quê |
+|---|---|---|
+| JDK | **25** | Compilar e rodar `backend-java/` — confira `JAVA_HOME`, o padrão do seu sistema pode ser outra versão |
+| Maven | 3.9+ (ou use o wrapper `./mvnw`/`mvnw.cmd`, já incluso) | Build e execução do backend |
+| Node.js | 24 | Build e execução do `frontend/` |
+| npm | 11+ | Gerenciador de pacotes do frontend |
+| PostgreSQL 16 (ou o `postgres` do compose, exposto em `localhost:5433`) | — | Banco de dados do perfil `dev` (`POSTGRES_HOST`/`POSTGRES_PORT` sobrescrevem o host/porta padrão, ver `application-dev.yml`) |
+
+```bash
+git clone <url-do-repositório>
+cd finance
+
+# 1. Banco — suba só o Postgres do compose (mais simples que instalar localmente)
+docker compose -f docker-compose.dev.yml up -d postgres
+
+# 2. Backend (terminal 1) — confirme JAVA_HOME apontando para um JDK 25
+cd backend-java
+POSTGRES_PORT=5433 ./mvnw spring-boot:run        # Linux/macOS
+# Windows: set POSTGRES_PORT=5433 && mvnw.cmd spring-boot:run
+
+# 3. Frontend (terminal 2)
+cd frontend
+npm install
+npm run dev
+```
+
+### Migrações e massa de dados inicial (seeds)
+
+- **Migrações**: não há uma ferramenta de migração dedicada (Flyway/Liquibase) — o schema é evoluído automaticamente pelo Hibernate (`spring.jpa.hibernate.ddl-auto=update`) a cada subida da aplicação, contra PostgreSQL real. Dívida técnica registrada em [ADR-0026](docs/adr/0026-containerizacao-dev-postgresql.md): adotar uma ferramenta de migração versionada exigiria reconstruir o histórico de schema das 13 fases já implementadas — tratado como decisão própria e futura, não como parte desta mudança.
+- **Seed de dados de desenvolvimento**: ao subir com o perfil `dev` ativo (o padrão em ambas as opções acima), `DevDataSeeder` roda automaticamente e é **idempotente** (seguro rodar em toda subida — não duplica dados, verificado inclusive após restart de container com dados já persistidos no Postgres):
+  - Cria o usuário de teste `dev@financepulse.local` / `DevPassword1` (login imediato via `POST /auth/login`), reaproveitando o `RegisterUserUseCase` real (mesma validação e hashing de senha usados em produção).
+  - Popula as categorias padrão desse usuário (Alimentação, Transporte, Moradia, Lazer, Saúde, Educação, Salário, Outros — reaproveitando o seed preguiçoso já existente em `ListCategoriesUseCase`, RF-025).
+  - Pode ser desabilitado com `FINANCEPULSE_SEED_ENABLED=false`. Nunca roda durante a suíte de testes (`src/test/resources/application.properties` não ativa o perfil `dev`).
+
+Abra `http://localhost:5173` e entre com o usuário semeado acima, ou registre um novo.
+
+### Rodar as suítes de teste
+
+**Fora dos contêineres** (mais rápido — a suíte do backend usa H2 em memória, não precisa do Postgres/Docker de pé):
+
+```bash
+cd backend-java && ./mvnw test     # 446 testes
+cd frontend && npm test             # 30 testes
+```
+
+**Dentro dos contêineres:**
+
+```bash
+# Backend: a imagem final de runtime não tem Maven/fontes (multi-stage) — use o estágio
+# intermediário "build", que tem tudo isso, para rodar a suíte:
+docker build --target build -t financepulse-backend-test backend-java
+docker run --rm financepulse-backend-test ./mvnw test
+
+# Frontend: o container de dev já tem Node + node_modules + fontes — com a stack de pé
+# (docker compose -f docker-compose.dev.yml up -d), rode direto:
+docker compose -f docker-compose.dev.yml exec frontend npm test
+```
+
+### Scripts utilitários por subprojeto
+
+**`backend-java/`** (detalhes em [backend-java/README.md](backend-java/README.md)):
+
+| Comando | Faz o quê |
+|---|---|
+| `./mvnw spring-boot:run` | Sobe a aplicação em modo desenvolvimento (perfil `dev`) |
+| `./mvnw test` | Roda toda a suíte de testes |
+
+**`frontend/`** (detalhes em [frontend/README.md](frontend/README.md)):
+
+| Comando | Faz o quê |
+|---|---|
+| `npm run dev` | Sobe o servidor de desenvolvimento (Vite) |
+| `npm test` | Roda a suíte de testes uma vez (Vitest) |
+| `npm run test:watch` | Roda a suíte em modo watch |
+| `npm run build` | Type-check + build de produção |
+| `npm run lint` | Lint (oxlint) |
+
+Não há `db:migrate`/`db:seed` como scripts separados — não existe ferramenta de migração dedicada (ver acima) nem seed de infraestrutura fora do `DevDataSeeder` já descrito.
+
+### Variáveis de ambiente
+
+**Raiz do repositório** (`.env`, usado pelo `docker-compose.dev.yml`; valor padrão entre parênteses):
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `POSTGRES_DB` | `financepulse_dev` | Nome do banco de dados |
+| `POSTGRES_USER` | `fp_user` | Usuário do PostgreSQL |
+| `POSTGRES_PASSWORD` | `fp_password` | Senha do PostgreSQL — troque em qualquer ambiente compartilhado |
+| `FINANCEPULSE_JWT_SECRET` | `change-me-in-dev` | Segredo de assinatura dos tokens JWT |
+| `FINANCEPULSE_SEED_ENABLED` | `true` | Liga/desliga o `DevDataSeeder` |
+
+**Backend, fora do Docker Compose** (variáveis de ambiente do processo; ver `application-dev.yml`):
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `POSTGRES_HOST` | `localhost` | Host do PostgreSQL — `postgres` dentro do compose (já configurado), `localhost` para rodar o backend manualmente |
+| `POSTGRES_PORT` | `5432` | Porta do PostgreSQL — `5433` se estiver usando o `postgres` do compose a partir de fora dele |
+| `FINANCEPULSE_CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Origens de frontend permitidas por CORS (separadas por vírgula se houver mais de uma) |
+
+**Frontend** (`frontend/.env.development`, já versionado):
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:8080` | URL base da API do backend |
+
+---
+
 ## Objetivo dos Agentes
 
 Cada agente possui um domínio de atuação exclusivo, evitando sobreposição de responsabilidades. Juntos, formam um ciclo de desenvolvimento com separação clara entre **decisão de arquitetura**, **execução de implementação** e **validação de qualidade independente** — mesmo modelo de responsabilidades usado por equipes de engenharia de software maduras.

@@ -63,10 +63,18 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- H2 embarcado (ADR-0013 revisa ADR-0003): equivalente ao SQLite do backend TypeScript -->
+    <!-- H2 embarcado (ADR-0013 revisa ADR-0003): usado apenas pela suíte de testes desde ADR-0026
+         (banco de desenvolvimento real passou a ser PostgreSQL, via Docker Compose) -->
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- PostgreSQL: banco de desenvolvimento real (ADR-0026) -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
 

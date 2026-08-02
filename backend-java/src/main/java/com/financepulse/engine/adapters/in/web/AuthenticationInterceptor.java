@@ -28,6 +28,13 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // Preflight de CORS (ver ADR-0025): o navegador nunca envia Authorization em um OPTIONS de
+        // preflight, então bloqueá-lo aqui quebraria o handshake de CORS para toda rota protegida —
+        // a requisição real subsequente (com Authorization) continua sendo verificada normalmente.
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
         Optional<String> userId = authenticatedUserResolver.resolve(request.getHeader("Authorization"));
 
         if (userId.isEmpty()) {

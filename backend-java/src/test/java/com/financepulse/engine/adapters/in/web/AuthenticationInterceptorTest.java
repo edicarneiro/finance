@@ -54,6 +54,18 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    void allowsAnOptionsRequestWithoutAnAuthorizationHeaderSoCorsPreflightIsNeverBlocked() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setMethod("OPTIONS");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean proceed = interceptor.preHandle(request, response, new Object());
+
+        assertThat(proceed).isTrue();
+        assertThat(response.getStatus()).isNotEqualTo(401);
+    }
+
+    @Test
     void gettingTheUserIdWithoutHavingGoneThroughTheInterceptorThrows() {
         MockHttpServletRequest request = new MockHttpServletRequest();
 

@@ -1,0 +1,39 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border, #e5e4e7);
+}
+
+.brand {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.links {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  margin-left: 1.5rem;
+}
+
+.main {
+  flex: 1;
+  padding: 1.5rem;
+}
+
+.sessionExpiredBanner {
+  background: #fdecea;
+  color: #b3261e;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

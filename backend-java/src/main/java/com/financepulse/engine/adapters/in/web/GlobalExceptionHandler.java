@@ -2,11 +2,35 @@ package com.financepulse.engine.adapters.in.web;
 
 import com.financepulse.engine.adapters.in.web.dto.ErrorResponse;
 import com.financepulse.engine.domain.account.errors.AccountNotFoundException;
+import com.financepulse.engine.domain.account.errors.ArchivedAccountException;
 import com.financepulse.engine.domain.account.errors.InvalidAccountNameException;
 import com.financepulse.engine.domain.account.errors.InvalidCurrencyException;
+import com.financepulse.engine.domain.backoffice.errors.ForbiddenException;
+import com.financepulse.engine.domain.budget.errors.BudgetNotFoundException;
+import com.financepulse.engine.domain.budget.errors.InvalidAlertThresholdException;
+import com.financepulse.engine.domain.budget.errors.InvalidBudgetLimitException;
+import com.financepulse.engine.domain.budget.errors.InvalidBudgetPeriodException;
+import com.financepulse.engine.domain.category.errors.CategoryHasSubcategoriesException;
+import com.financepulse.engine.domain.category.errors.CategoryHasTransactionsException;
+import com.financepulse.engine.domain.category.errors.CategoryNotFoundException;
+import com.financepulse.engine.domain.category.errors.InvalidCategoryHierarchyException;
+import com.financepulse.engine.domain.category.errors.InvalidCategoryNameException;
+import com.financepulse.engine.domain.goal.errors.GoalNotFoundException;
+import com.financepulse.engine.domain.goal.errors.InvalidGoalAssociationException;
+import com.financepulse.engine.domain.goal.errors.InvalidGoalDeadlineException;
+import com.financepulse.engine.domain.goal.errors.InvalidGoalNameException;
+import com.financepulse.engine.domain.goal.errors.InvalidGoalTargetException;
+import com.financepulse.engine.domain.goal.errors.InvalidGoalThresholdException;
+import com.financepulse.engine.domain.notification.errors.NotificationNotFoundException;
+import com.financepulse.engine.domain.report.errors.InvalidReportPeriodException;
+import com.financepulse.engine.domain.transaction.errors.InvalidAmountException;
+import com.financepulse.engine.domain.transaction.errors.TransactionNotFoundException;
+import com.financepulse.engine.domain.user.errors.AccountSuspendedException;
 import com.financepulse.engine.domain.user.errors.DuplicateEmailException;
+import com.financepulse.engine.domain.user.errors.InvalidConsentVersionException;
 import com.financepulse.engine.domain.user.errors.InvalidCredentialsException;
 import com.financepulse.engine.domain.user.errors.InvalidEmailException;
+import com.financepulse.engine.domain.user.errors.UserNotFoundException;
 import com.financepulse.engine.domain.user.errors.WeakPasswordException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,13 +60,42 @@ public class GlobalExceptionHandler {
         InvalidEmailException.class,
         WeakPasswordException.class,
         InvalidAccountNameException.class,
-        InvalidCurrencyException.class
+        InvalidCurrencyException.class,
+        InvalidCategoryNameException.class,
+        InvalidAmountException.class,
+        ArchivedAccountException.class,
+        InvalidCategoryHierarchyException.class,
+        CategoryHasSubcategoriesException.class,
+        CategoryHasTransactionsException.class,
+        InvalidBudgetLimitException.class,
+        InvalidAlertThresholdException.class,
+        InvalidBudgetPeriodException.class,
+        InvalidGoalNameException.class,
+        InvalidGoalTargetException.class,
+        InvalidGoalDeadlineException.class,
+        InvalidGoalAssociationException.class,
+        InvalidGoalThresholdException.class,
+        InvalidReportPeriodException.class,
+        InvalidConsentVersionException.class
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(RuntimeException error) {
         return ResponseEntity.badRequest().body(new ErrorResponse(error.getMessage()));
     }
 
-    @ExceptionHandler(AccountNotFoundException.class)
+    @ExceptionHandler({ForbiddenException.class, AccountSuspendedException.class})
+    public ResponseEntity<ErrorResponse> handleForbidden(RuntimeException error) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(error.getMessage()));
+    }
+
+    @ExceptionHandler({
+        AccountNotFoundException.class,
+        CategoryNotFoundException.class,
+        TransactionNotFoundException.class,
+        BudgetNotFoundException.class,
+        GoalNotFoundException.class,
+        NotificationNotFoundException.class,
+        UserNotFoundException.class
+    })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException error) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(error.getMessage()));
     }
