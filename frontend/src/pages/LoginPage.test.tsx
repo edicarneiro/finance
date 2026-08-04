@@ -14,7 +14,7 @@ describe('LoginPage (fluxo completo via App real)', () => {
     await user.type(screen.getByLabelText('Senha'), 'StrongPass1')
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
-    await waitFor(() => expect(screen.getByText('Bem-vindo ao FinancePulse')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument())
     expect(sessionStorage.getItem('financepulse.token')).toBe('fake-jwt-token')
   })
 

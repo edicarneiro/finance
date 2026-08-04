@@ -19,10 +19,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav className={styles.nav}>
         <span className={styles.brand}>FinancePulse</span>
         <div className={styles.links}>
-          <NavLink to="/">Início</NavLink>
+          <NavLink to="/">Dashboard</NavLink>
           <NavLink to="/accounts">Contas</NavLink>
           <NavLink to="/categories">Categorias</NavLink>
           <NavLink to="/transactions">Transações</NavLink>
+          <NavLink to="/budgets">Orçamentos</NavLink>
+          <NavLink to="/goals">Metas</NavLink>
+          <NavLink to="/reports">Relatórios</NavLink>
+          <NavLink to="/notifications">Notificações</NavLink>
+          <NavLink to="/privacy">Privacidade</NavLink>
+          <NavLink to="/backoffice">Backoffice</NavLink>
         </div>
         <button type="button" onClick={logout}>
           Sair

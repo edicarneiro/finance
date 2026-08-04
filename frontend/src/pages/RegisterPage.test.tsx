@@ -14,7 +14,7 @@ describe('RegisterPage (fluxo completo via App real)', () => {
     await user.type(screen.getByLabelText('Confirmar senha'), 'StrongPass1')
     await user.click(screen.getByRole('button', { name: 'Criar conta' }))
 
-    await waitFor(() => expect(screen.getByText('Bem-vindo ao FinancePulse')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument())
   })
 
   it('shows a client-side validation error when passwords do not match, without calling the backend', async () => {

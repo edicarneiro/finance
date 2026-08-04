@@ -39,6 +39,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Mapeia erros de domínio para respostas HTTP sem vazar detalhes internos
@@ -103,6 +104,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException error) {
         return ResponseEntity.badRequest().body(new ErrorResponse("Corpo da requisição inválido ou incompleto."));
+    }
+
+    // Uma rota inexistente (ex.: um navegador pedindo "/" ou "/favicon.ico") é um 404 comum de
+    // cliente, não um erro de aplicação — não deve cair no handler genérico de 500 nem ser logada
+    // como ERROR (rules.md §5: erro real vs. comportamento esperado de cliente).
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException error) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse("Recurso não encontrado."));
     }
 
     @ExceptionHandler(Exception.class)

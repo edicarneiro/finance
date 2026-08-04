@@ -69,6 +69,22 @@ describe('httpClient', () => {
     expect(listener).not.toHaveBeenCalled()
   })
 
+  // Achado de QA (Fase 13.8): DELETE /users/me também retorna 401 quando a senha de reautenticação
+  // está errada — um erro de validação, não uma sessão expirada. Sem `treatUnauthorizedAsSessionExpired:
+  // false`, isso deslogava o usuário silenciosamente no meio do fluxo de exclusão de conta.
+  it('does not notify the session-expired listener on a 401 from an authenticated call with treatUnauthorizedAsSessionExpired: false', async () => {
+    server.use(http.delete(`${API_BASE_URL}/users/me`, () => HttpResponse.json({ error: 'E-mail ou senha inválidos.' }, { status: 401 })))
+    setAuthToken('token-123')
+    const listener = vi.fn()
+    onSessionExpired(listener)
+
+    await expect(
+      apiRequest('/users/me', { method: 'DELETE', body: { password: 'errada' }, treatUnauthorizedAsSessionExpired: false }),
+    ).rejects.toBeInstanceOf(ApiError)
+
+    expect(listener).not.toHaveBeenCalled()
+  })
+
   // Achado de QA (Fase 13.2): vários endpoints do backend respondem 200 com corpo vazio
   // (ex.: AccountController.update, ResponseEntity.ok().build()), não só 204 — response.json()
   // lança uma exceção de parsing em um corpo vazio.

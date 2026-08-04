@@ -31,6 +31,12 @@ type RequestOptions = {
   body?: unknown
   /** false para /auth/register e /auth/login: um 401 ali é uma credencial inválida, não uma sessão expirada. */
   authenticated?: boolean
+  /**
+   * false para chamadas autenticadas que também exigem senha como reautenticação (ex.: excluir
+   * conta) — nelas um 401 significa "senha de confirmação incorreta", não "sessão expirada", e não
+   * deve deslogar o usuário silenciosamente no meio do fluxo.
+   */
+  treatUnauthorizedAsSessionExpired?: boolean
 }
 
 async function parseErrorMessage(response: Response): Promise<string> {
@@ -43,7 +49,7 @@ async function parseErrorMessage(response: Response): Promise<string> {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, authenticated = true } = options
+  const { method = 'GET', body, authenticated = true, treatUnauthorizedAsSessionExpired = true } = options
 
   const headers: Record<string, string> = {}
   if (body !== undefined) {
@@ -62,7 +68,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!response.ok) {
     const message = await parseErrorMessage(response)
 
-    if (response.status === 401 && authenticated) {
+    if (response.status === 401 && authenticated && treatUnauthorizedAsSessionExpired) {
       sessionExpiredListener?.()
     }
 
@@ -74,4 +80,45 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   // o corpo é lido como texto primeiro e só parseado se houver conteúdo.
   const text = await response.text()
   return (text ? JSON.parse(text) : undefined) as T
+}
+
+const FALLBACK_DOWNLOAD_FILENAME = 'download'
+
+function filenameFromContentDisposition(header: string | null): string | null {
+  const match = header?.match(/filename="?([^";]+)"?/)
+  return match ? match[1] : null
+}
+
+/**
+ * Baixa um arquivo autenticado (ex.: exportação CSV) e dispara o download no navegador.
+ * `<a href>` simples não funciona aqui — a autenticação é via header `Authorization`, que uma
+ * navegação/clique de link comum não envia; por isso a chamada precisa passar por `fetch` com o
+ * mesmo token das demais requisições, depois converter a resposta em um Blob local.
+ */
+export async function downloadFile(path: string): Promise<void> {
+  const headers: Record<string, string> = {}
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, { headers })
+
+  if (!response.ok) {
+    const message = await parseErrorMessage(response)
+    if (response.status === 401) {
+      sessionExpiredListener?.()
+    }
+    throw new ApiError(message, response.status)
+  }
+
+  const filename = filenameFromContentDisposition(response.headers.get('Content-Disposition')) ?? FALLBACK_DOWNLOAD_FILENAME
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(objectUrl)
 }
